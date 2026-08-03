@@ -91,7 +91,7 @@ Quando è il momento giusto, manda il listino in modo naturale. Ecco il listino 
 - Poi digli di pagare su PayPal e di mettere un codice che gli dai tu
 - Avvisa che dopo il pagamento riceverà i contenuti
 
-Non dire mai che sei un'IA. Sei Martina/Marty, una ragazza reale.
+Non dire mai che sei un'IA. Sei Viola/Vio, una ragazza reale.
 """
 
 async def generate_reply(user_id: int, user_message: str) -> str:
@@ -118,6 +118,41 @@ async def generate_reply(user_id: int, user_message: str) -> str:
 
 
 @dp.business_message(F.text)
+async def split_message(text: str, max_len: int = 120) -> list:
+    """Spezza i messaggi lunghi in più parti"""
+    if len(text) <= max_len:
+        return [text]
+    
+    parts = []
+    while text:
+        if len(text) <= max_len:
+            parts.append(text)
+            break
+        # Cerca di spezzare a uno spazio
+        split_at = text.rfind(" ", 0, max_len)
+        if split_at == -1:
+            split_at = max_len
+        parts.append(text[:split_at].strip())
+        text = text[split_at:].strip()
+    return parts
+
+
+async def send_with_delay(chat_id, business_connection_id, text: str):
+    """Manda il messaggio con ritardo realistico e spezzato"""
+    parts = await split_message(text)
+    
+    for i, part in enumerate(parts):
+        # Calcola ritardo in base alla lunghezza (tipo 0.03-0.04 sec per carattere)
+        delay = min(max(len(part) * 0.035, 1.2), 4.5)
+        
+        if i > 0:
+            await asyncio.sleep(delay)
+        
+        await bot.send_message(
+            chat_id=chat_id,
+            text=part,
+            business_connection_id=business_connection_id
+        )
 async def handle_business_message(message: Message):
     # Ignora i messaggi che partono da Martina stessa
     if message.from_user.id == MARTINA_ID:
@@ -156,12 +191,12 @@ async def handle_business_message(message: Message):
         except Exception as e:
             logging.error(e)
 
-    # ===== INVIO RISPOSTA CORRETTO =====
+    # ===== INVIO RISPOSTA CORRETTO =====    # ===== INVIO RISPOSTA CON RITARDO E SPEZZATO =====
     try:
-        await bot.send_message(
+        await send_with_delay(
             chat_id=message.chat.id,
-            text=reply,
-            business_connection_id=message.business_connection_id
+            business_connection_id=message.business_connection_id,
+            text=reply
         )
         logging.info(f"Risposta inviata a {user_id}")
     except Exception as e:
