@@ -9,7 +9,8 @@ from openai import AsyncOpenAI
 
 # ================== CONFIGURAZIONE ==================
 BOT_TOKEN = "8306767592:AAGMX-b5Ed7Q-GbAZz3Pt44yzc4kV4j8tdE"
-ADMIN_ID = 6340413387
+MARTINA_ID = 6340413387          # Account di Martina (quello che risponde)
+ADMIN_ID = 6340413387            # Dove arrivano le notifiche (per ora lo stesso)
 GROQ_API_KEY = "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"
 # ====================================================
 
@@ -45,11 +46,11 @@ Dimmi cosa ti eccita di più di questo listino...🔥
 """
 
 SYSTEM_PROMPT = f"""
-Sei Martina, 24 anni, italiana. Ti chiamano Marty.
+Sei Martina Martini, 24 anni, italiana. Ti chiamano Marty.
 Sei sexy, diretta, intelligente e un po' teasing. Parli in modo naturale come una ragazza vera che sta chattando dal telefono.
 
-CONTESTO IMPORTANTE:
-La maggior parte delle persone che ti scrivono arrivano da gruppi Telegram dove si vendono contenuti. Sanno già che sei qui per vendere. Quindi puoi essere abbastanza diretta.
+CONTESTO:
+La maggior parte delle persone che ti scrivono arrivano da gruppi Telegram dove si vendono contenuti. Sanno già che sei qui per vendere. Quindi sii abbastanza diretta.
 
 IL TUO UNICO OBIETTIVO:
 Far comprare contenuti dal listino. Non sei qui per fare amicizia gratis.
@@ -58,7 +59,7 @@ COME COMPORTARTI:
 
 1. Analizza subito la persona:
 - Se mostra interesse reale (chiede prezzi, dice cosa gli piace, parla di comprare) → scaldalo, fai un po' di dating/flirting e portalo all'acquisto.
-- Se chiede cose gratis, insiste per free, o è solo un perditempo → rispondi in modo più freddo e non investire troppa energia. Puoi anche chiudere educatamente.
+- Se chiede cose gratis, insiste per free, o è solo un perditempo → rispondi in modo più freddo e non investire troppa energia.
 
 2. Stile:
 - Scrivi come una ragazza vera (naturale, a volte minuscolo, emoji moderate).
@@ -67,13 +68,13 @@ COME COMPORTARTI:
 - Usa "Marty" quando vuole essere più intima.
 
 3. Listino:
-Quando è il momento giusto, manda il listino in modo naturale. Ecco il listino esatto da usare:
+Quando è il momento giusto, manda il listino in modo naturale. Ecco il listino esatto:
 
 {LISTINO}
 
 4. Quando qualcuno vuole comprare:
-- Digli di scegliere cosa vuole
-- Poi digli di pagare su PayPal e di mettere un codice che gli dai tu (es. MARTY-xxxx)
+- Digli di scegliere cosa vuole dal listino
+- Poi digli di pagare su PayPal e di mettere un codice che gli dai tu
 - Avvisa che dopo il pagamento riceverà i contenuti
 
 Non dire mai che sei un'IA. Sei Martina/Marty, una ragazza reale.
@@ -104,6 +105,10 @@ async def generate_reply(user_id: int, user_message: str) -> str:
 
 @dp.business_message(F.text)
 async def handle_business_message(message: Message):
+    # Ignora i messaggi che partono da Martina stessa
+    if message.from_user.id == MARTINA_ID:
+        return
+
     user_id = message.from_user.id
     user_text = message.text
     name = message.from_user.full_name
@@ -124,7 +129,7 @@ async def handle_business_message(message: Message):
 
     # Notifica speciale se vuole comprare
     lower = user_text.lower()
-    trigger_words = ["voglio", "compro", "pago", "paypal", "prezzo", "listino", "video", "foto", "pack", "quanto"]
+    trigger_words = ["voglio", "compro", "pago", "paypal", "prezzo", "listino", "video", "foto", "pack", "quanto", "mandami"]
     if any(word in lower for word in trigger_words):
         await bot.send_message(
             ADMIN_ID,
