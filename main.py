@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 # ================== CONFIGURAZIONE ==================
 BOT_TOKEN = "8306767592:AAGMX-b5Ed7Q-GbAZz3Pt44yzc4kV4j8tdE"
 MARTINA_ID = 6340413387          # Account di Martina (quello che risponde)
-ADMIN_ID = 6340413387            # Dove arrivano le notifiche (per ora lo stesso)
+ADMIN_ID = 6340413387            # Dove arrivano le notifiche
 GROQ_API_KEY = "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"
 # ====================================================
 
@@ -46,7 +46,7 @@ Dimmi cosa ti eccita di più di questo listino...🔥
 """
 
 SYSTEM_PROMPT = f"""
-Sei Martina Martini, 24 anni, italiana. Ti chiamano Marty.
+Sei Viola Martini, 21 anni, italiana. Ti chiamano Vio.
 Sei sexy, diretta, intelligente e un po' teasing. Parli in modo naturale come una ragazza vera che sta chattando dal telefono.
 
 CONTESTO:
@@ -65,7 +65,7 @@ COME COMPORTARTI:
 - Scrivi come una ragazza vera (naturale, a volte minuscolo, emoji moderate).
 - Sii diretta ma sexy.
 - Se è interessato, fai un po' di teasing e dating per farlo attaccare di più.
-- Usa "Marty" quando vuole essere più intima.
+- Usa "Vio" quando vuole essere più intima.
 
 3. Listino:
 Quando è il momento giusto, manda il listino in modo naturale. Ecco il listino esatto:
@@ -114,7 +114,7 @@ async def handle_business_message(message: Message):
     name = message.from_user.full_name
     username = message.from_user.username or "senza_username"
 
-    # Notifica normale a te
+    # Notifica normale
     try:
         await bot.send_message(
             ADMIN_ID,
@@ -122,24 +122,37 @@ async def handle_business_message(message: Message):
             parse_mode="HTML"
         )
     except Exception as e:
-        logging.error(e)
+        logging.error(f"Errore notifica: {e}")
 
     # Genera risposta IA
     reply = await generate_reply(user_id, user_text)
 
-    # Notifica speciale se vuole comprare
+    # Notifica speciale interesse acquisto
     lower = user_text.lower()
     trigger_words = ["voglio", "compro", "pago", "paypal", "prezzo", "listino", "video", "foto", "pack", "quanto", "mandami"]
     if any(word in lower for word in trigger_words):
-        await bot.send_message(
-            ADMIN_ID,
-            f"🔥🔥 <b>INTERESSE DI ACQUISTO</b>\n"
-            f"Nome: {name}\n@{username}\nID: <code>{user_id}</code>\n\n"
-            f"Messaggio: {user_text}",
-            parse_mode="HTML"
-        )
+        try:
+            await bot.send_message(
+                ADMIN_ID,
+                f"🔥🔥 <b>INTERESSE DI ACQUISTO</b>\n"
+                f"Nome: {name}\n@{username}\nID: <code>{user_id}</code>\n\n"
+                f"Messaggio: {user_text}",
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            logging.error(e)
 
-    await message.answer(reply, business_connection_id=message.business_connection_id)
+    # ===== INVIO RISPOSTA CORRETTO =====
+    try:
+        await bot.send_message(
+            chat_id=message.chat.id,
+            text=reply,
+            business_connection_id=message.business_connection_id
+        )
+        logging.info(f"Risposta inviata a {user_id}")
+    except Exception as e:
+        logging.error(f"ERRORE INVIO: {e}")
+        await bot.send_message(ADMIN_ID, f"❌ Errore invio risposta:\n<code>{e}</code>", parse_mode="HTML")
 
 
 async def main():
